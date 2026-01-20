@@ -1,16 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
+  constructor(private configService: ConfigService) {}
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(createUserDto: CreateUserDto) {
     return 'This action adds a new user';
   }
 
   findAll() {
-    return `This action returns all users`;
+    const port = this.configService.get<string>('port');
+    const host = this.configService.get<string>('database.host');
+
+    return `App is running on port: ${port}.\nThis action returns all users\nDatabase host: ${host}`;
   }
 
   findOne(id: number) {
