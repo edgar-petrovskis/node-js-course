@@ -8,9 +8,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private configService: ConfigService) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+    return createUserDto;
+    // return 'This action adds a new user';
   }
 
   findAll() {
