@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { AuthGuard } from './common/guards/auth.guard';
 import configuration from './config/configuration';
 import { UsersModule } from './users/users.module';
 
@@ -22,7 +24,9 @@ import { UsersModule } from './users/users.module';
   controllers: [AppController],
   providers: [
     AppService,
+    { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })
 export class AppModule {}
