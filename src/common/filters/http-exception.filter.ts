@@ -7,6 +7,10 @@ import {
   HttpException,
 } from '@nestjs/common';
 
+/* Look up here: 
+  - https://www.rfc-editor.org/rfc/rfc9457
+  - https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html
+ */
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: HttpException, host: ArgumentsHost) {
