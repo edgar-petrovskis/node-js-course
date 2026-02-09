@@ -17,6 +17,16 @@ import { UsersModule } from './users/users.module';
       load: [configuration],
     }),
   ],
+  imports: [
+    UsersModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        process.env.NODE_ENV === 'development' ? '.env.local' : '.env',
+      ],
+      load: [configuration],
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
