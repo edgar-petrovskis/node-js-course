@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -12,7 +13,6 @@ import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
-    UsersModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
@@ -20,6 +20,21 @@ import { UsersModule } from './users/users.module';
       ],
       load: [configuration],
     }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.getOrThrow<string>('database.host'),
+        port: configService.getOrThrow<number>('database.port'),
+        username: configService.getOrThrow<string>('database.user'),
+        password: configService.getOrThrow<string>('database.password'),
+        database: configService.getOrThrow<string>('database.name'),
+        autoLoadEntities: true,
+        synchronize: false,
+      }),
+    }),
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
