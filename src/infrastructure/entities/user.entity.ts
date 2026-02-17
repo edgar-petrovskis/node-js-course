@@ -21,18 +21,18 @@ export class User {
   @Column({ type: 'varchar', length: 320 })
   email: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', name: 'password_hash' })
   passwordHash!: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role!: UserRole;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, name: 'refresh_token_hash' })
   refreshTokenHash!: string | null;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 }

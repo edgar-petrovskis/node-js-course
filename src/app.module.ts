@@ -9,6 +9,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
+import { createDatabaseOptions } from './infrastructure/database/data-source';
 import { UsersModule } from './interfaces/users/users.module';
 
 @Module({
@@ -24,14 +25,14 @@ import { UsersModule } from './interfaces/users/users.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.getOrThrow<string>('database.host'),
-        port: configService.getOrThrow<number>('database.port'),
-        username: configService.getOrThrow<string>('database.user'),
-        password: configService.getOrThrow<string>('database.password'),
-        database: configService.getOrThrow<string>('database.name'),
+        ...createDatabaseOptions({
+          host: configService.getOrThrow<string>('database.host'),
+          port: configService.getOrThrow<number>('database.port'),
+          username: configService.getOrThrow<string>('database.user'),
+          password: configService.getOrThrow<string>('database.password'),
+          database: configService.getOrThrow<string>('database.name'),
+        }),
         autoLoadEntities: true,
-        synchronize: false,
       }),
     }),
     UsersModule,

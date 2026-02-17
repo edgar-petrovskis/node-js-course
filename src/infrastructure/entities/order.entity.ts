@@ -25,31 +25,31 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'user_id' })
   userId!: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user!: User;
 
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.NEW })
   status!: OrderStatus;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 0, name: 'total_amount_cents' })
   totalAmountCents!: number;
 
   @Column({ type: 'char', length: 3, default: 'UAH' })
   currency!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'idempotency_key' })
   idempotencyKey!: string;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: false })
   items!: OrderItem[];
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 }

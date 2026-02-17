@@ -18,29 +18,29 @@ export class OrderItem {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'order_id' })
   orderId!: string;
 
   @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'orderId' })
+  @JoinColumn({ name: 'order_id' })
   order!: Order;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', name: 'product_id' })
   productId!: string;
 
   @ManyToOne(() => Product, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'productId' })
+  @JoinColumn({ name: 'product_id' })
   product!: Product;
 
   @Column({ type: 'int' })
   quantity!: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', name: 'price_at_purchase_cents' })
   priceAtPurchaseCents!: number;
 
   @Column({ type: 'char', length: 3, default: 'USD' })
   currency!: string;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 }

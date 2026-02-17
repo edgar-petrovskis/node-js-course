@@ -21,7 +21,7 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', name: 'price_cents' })
   priceCents!: number;
 
   @Column({ type: 'char', length: 3, default: 'USD' })
@@ -30,12 +30,12 @@ export class Product {
   @Column({ type: 'int', default: 0 })
   stock!: number;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive!: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 }
