@@ -24,7 +24,7 @@ export class Product {
   @Column({ type: 'int', name: 'price_cents' })
   priceCents!: number;
 
-  @Column({ type: 'char', length: 3, default: 'USD' })
+  @Column({ type: 'char', length: 3, default: 'UAH' })
   currency!: string;
 
   @Column({ type: 'int', default: 0 })

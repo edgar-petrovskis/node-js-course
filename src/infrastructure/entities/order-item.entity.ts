@@ -38,7 +38,7 @@ export class OrderItem {
   @Column({ type: 'int', name: 'price_at_purchase_cents' })
   priceAtPurchaseCents!: number;
 
-  @Column({ type: 'char', length: 3, default: 'USD' })
+  @Column({ type: 'char', length: 3, default: 'UAH' })
   currency!: string;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
