@@ -12,11 +12,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 
-import { LoggingInterceptor } from '../common/interceptors/logging.interceptor';
+import { UsersService } from '../../application/users/users.service';
+import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UsersService } from './users.service';
 
 @UsePipes(
   new ValidationPipe({

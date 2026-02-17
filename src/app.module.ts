@@ -9,7 +9,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
-import { UsersModule } from './users/users.module';
+import { UsersModule } from './interfaces/users/users.module';
 
 @Module({
   imports: [
