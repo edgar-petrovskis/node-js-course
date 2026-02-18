@@ -1,27 +1,77 @@
-## Architecture structure description
+# Node.js Course API
 
-This is a **NestJS** project built on SOLID and Clean Architecture principles. The structure is organized into modules(UsersModule), where each module incapsulates its own logic and consists of next levels:
+Backend API for a learning e-commerce project (coffee store) built with NestJS + TypeORM + PostgreSQL.
 
-1. Controller - handles HTTP requests
-2. Service - contains business logic
-3. DTO - place where validation is described
-4. Entities - place where models are described
+## Tech stack
 
-This approach allows code be predictable and scalable
+- Node.js + NestJS
+- PostgreSQL
+- TypeORM (migrations + seed)
+- Swagger (`/api` in non-production)
 
-## Why?
+## Project structure
 
-In case of project growth it is easy to expand codebase without pain due its scalability via SOLID principles (each file has its purpose.)
+- `src/interfaces/*` - controllers and HTTP DTOs
+- `src/application/*` - business logic/services
+- `src/infrastructure/*` - DB config, entities, migrations, swagger setup
+- `scripts/seed.ts` - seed data
 
-**NestJS** provides a way to inject dependencies without direct initialization via `new ConfigModule()`. By doing this it reduces coupling between modules, provides testability. The implementation could be easily replaced by another without major codebase changes.
+## Prerequisites
 
-## Developer Experience
+- Node.js 20+
+- Yarn
+- Docker (for local PostgreSQL)
 
-The project uses **Yarn** as package manager.
+## Run from scratch
 
-Quick start:
+1. Install dependencies:
 
 ```bash
-yarn install          # install dependencies
-yarn run start:dev    # run with hot-reload
+yarn install
 ```
+
+2. Start PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+3. Run migrations:
+
+```bash
+yarn migrate:up
+```
+
+4. Seed initial data:
+
+```bash
+yarn seed
+```
+
+5. Start API:
+
+```bash
+yarn start:dev
+```
+
+API default URL: `http://localhost:3000`  
+Swagger UI: `http://localhost:3000/api`
+
+## Environment
+
+Use `.env` (see `.env.example` for minimal required variables):
+
+- `PORT`
+- `DATABASE_HOST`
+- `DATABASE_PORT`
+- `DATABASE_USER`
+- `DATABASE_PASSWORD`
+- `DATABASE_NAME`
+
+## Useful scripts
+
+- `yarn start:dev` - run app with watch mode
+- `yarn typecheck` - run TypeScript type check
+- `yarn migration:run` / `yarn migrate:up` - apply migrations
+- `yarn migration:revert` - rollback last migration
+- `yarn seed` - run seed script
