@@ -10,6 +10,13 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiHeader,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { OrdersService } from '../../application/orders/orders.service';
 import { Order } from '../../infrastructure/entities/order.entity';
@@ -22,11 +29,26 @@ import { CreateOrderDto } from './dto/create-order.dto';
 
 const STUB_USER_ID = '00000000-0000-0000-0000-000000000001';
 
+@ApiTags('orders')
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create order' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'UUID key used for idempotent order creation',
+  })
+  @ApiCreatedResponse({
+    description: 'New order created',
+    type: CreateOrderResponseDto,
+  })
+  @ApiOkResponse({
+    description: 'Existing order returned for duplicate idempotency key',
+    type: CreateOrderResponseDto,
+  })
   async create(
     @Headers('idempotency-key') idempotencyKey: string,
     @Body() dto: CreateOrderDto,

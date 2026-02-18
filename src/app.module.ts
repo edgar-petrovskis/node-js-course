@@ -11,6 +11,7 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
 import { OrdersModule } from './interfaces/orders/orders.module';
+import { ProductsModule } from './interfaces/products/products.module';
 import { UsersModule } from './interfaces/users/users.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { UsersModule } from './interfaces/users/users.module';
     }),
     UsersModule,
     OrdersModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [
