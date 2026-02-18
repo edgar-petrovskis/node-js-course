@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from '../../interfaces/users/dto/create-user.dto';
+import { UpdateUserDto } from '../../interfaces/users/dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -20,16 +20,16 @@ export class UsersService {
     return `App is running on port: ${port}.\nThis action returns all users\nDatabase host: ${host}`;
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return `This action returns a #${id} user`;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: number, updateUserDto: UpdateUserDto) {
+  update(id: string, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return `This action removes a #${id} user`;
   }
 }

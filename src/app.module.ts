@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -8,11 +9,13 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
-import { UsersModule } from './users/users.module';
+import { createDatabaseOptions } from './infrastructure/database/data-source';
+import { OrdersModule } from './interfaces/orders/orders.module';
+import { ProductsModule } from './interfaces/products/products.module';
+import { UsersModule } from './interfaces/users/users.module';
 
 @Module({
   imports: [
-    UsersModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
@@ -20,26 +23,23 @@ import { UsersModule } from './users/users.module';
       ],
       load: [configuration],
     }),
-  ],
-  imports: [
-    UsersModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: [
-        process.env.NODE_ENV === 'development' ? '.env.local' : '.env',
-      ],
-      load: [configuration],
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        ...createDatabaseOptions({
+          host: configService.getOrThrow<string>('database.host'),
+          port: configService.getOrThrow<number>('database.port'),
+          username: configService.getOrThrow<string>('database.user'),
+          password: configService.getOrThrow<string>('database.password'),
+          database: configService.getOrThrow<string>('database.name'),
+        }),
+        autoLoadEntities: true,
+      }),
     }),
-  ],
-  imports: [
     UsersModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: [
-        process.env.NODE_ENV === 'development' ? '.env.local' : '.env',
-      ],
-      load: [configuration],
-    }),
+    OrdersModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [
