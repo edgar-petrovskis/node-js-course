@@ -1,0 +1,57 @@
+scalar DateTime
+
+enum OrderStatus {
+  NEW
+  PAID
+  CANCELED
+}
+
+type Product {
+  id: ID!
+  title: String!
+  description: String
+  priceCents: Int!
+  currency: String!
+  stock: Int!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type OrderItem {
+  id: ID!
+  orderId: ID!
+  productId: ID!
+  quantity: Int!
+  priceAtPurchaseCents: Int!
+  currency: String!
+  createdAt: DateTime!
+  product: Product!
+}
+
+type Order {
+  id: ID!
+  userId: ID!
+  status: OrderStatus!
+  totalAmountCents: Int!
+  currency: String!
+  idempotencyKey: ID!
+  items: [OrderItem!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input OrdersFilterInput {
+  status: OrderStatus
+  dateFrom: DateTime
+  dateTo: DateTime
+}
+
+input OrdersPaginationInput {
+  limit: Int
+  offset: Int
+}
+
+type Query {
+  hello: String!
+}

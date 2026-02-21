@@ -1,3 +1,4 @@
+import { isISO8601 } from 'class-validator';
 import { DataSource, QueryFailedError } from 'typeorm';
 
 import {
@@ -8,9 +9,9 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 
+import { OrderStatus } from '../../domain/orders/order-status';
 import { OrderItem } from '../../infrastructure/entities/order-item.entity';
 import { Order } from '../../infrastructure/entities/order.entity';
-import { OrderStatus } from '../../infrastructure/entities/order.entity';
 import { Product } from '../../infrastructure/entities/product.entity';
 
 type OrderItemInput = {
@@ -23,12 +24,39 @@ type CreateOrderResult = {
   isDuplicate: boolean;
 };
 
+type FindOrdersDateRangeInput = {
+  dateFrom?: Date | string;
+  dateTo?: Date | string;
+};
+
 const ORDER_IDEMPOTENCY_CONSTRAINT = 'UQ_orders_user_id_idempotency_key';
 const PG_UNIQUE_VIOLATION_CODE = '23505';
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly dataSource: DataSource) {}
+
+  async findOrdersByDateRange(
+    input: FindOrdersDateRangeInput,
+  ): Promise<Order[]> {
+    const { dateFrom, dateTo } = this.normalizeDateRange(input);
+
+    const ordersRepository = this.dataSource.getRepository(Order);
+    const query = ordersRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'item')
+      .orderBy('order.created_at', 'DESC');
+
+    if (dateFrom) {
+      query.andWhere('order.created_at >= :dateFrom', { dateFrom });
+    }
+
+    if (dateTo) {
+      query.andWhere('order.created_at <= :dateTo', { dateTo });
+    }
+
+    return query.getMany();
+  }
 
   async createOrder(
     userId: string,
@@ -247,5 +275,62 @@ export class OrdersService {
       pgError?.code === PG_UNIQUE_VIOLATION_CODE &&
       pgError?.constraint === ORDER_IDEMPOTENCY_CONSTRAINT
     );
+  }
+
+  private normalizeDateRange({ dateFrom, dateTo }: FindOrdersDateRangeInput): {
+    dateFrom?: Date;
+    dateTo?: Date;
+  } {
+    const parsedDateFrom = this.parseDateInput(dateFrom, 'dateFrom');
+    const parsedDateTo = this.parseDateInput(dateTo, 'dateTo');
+
+    if (parsedDateFrom && parsedDateTo && parsedDateFrom > parsedDateTo) {
+      throw new BadRequestException(
+        'dateFrom must be less than or equal to dateTo',
+      );
+    }
+
+    return {
+      dateFrom: parsedDateFrom,
+      dateTo: parsedDateTo,
+    };
+  }
+
+  private parseDateInput(
+    value: Date | string | undefined,
+    fieldName: 'dateFrom' | 'dateTo',
+  ): Date | undefined {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        throw new BadRequestException(
+          `${fieldName} must be a valid ISO 8601 date-time`,
+        );
+      }
+
+      return value;
+    }
+
+    if (
+      typeof value !== 'string' ||
+      !isISO8601(value, { strict: true, strictSeparator: true })
+    ) {
+      throw new BadRequestException(
+        `${fieldName} must be a valid ISO 8601 date-time`,
+      );
+    }
+
+    const parsedDate = new Date(value);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      throw new BadRequestException(
+        `${fieldName} must be a valid ISO 8601 date-time`,
+      );
+    }
+
+    return parsedDate;
   }
 }
