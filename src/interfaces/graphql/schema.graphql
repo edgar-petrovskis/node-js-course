@@ -48,10 +48,29 @@ input OrdersFilterInput {
 }
 
 input OrdersPaginationInput {
-  limit: Int
-  offset: Int
+  first: Int
+  after: String
+  last: Int
+  before: String
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type OrdersConnection {
+  nodes: [Order!]!
+  totalCount: Int!
+  pageInfo: PageInfo!
 }
 
 type Query {
   hello: String!
+  orders(
+    filter: OrdersFilterInput
+    pagination: OrdersPaginationInput
+  ): OrdersConnection!
 }
