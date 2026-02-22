@@ -1,9 +1,9 @@
 import { isISO8601 } from 'class-validator';
-import { DataSource } from 'typeorm';
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { Order } from '../../infrastructure/entities/order.entity';
+import { OrdersRepository } from '../../infrastructure/repositories/orders.repository';
 
 import {
   FindOrdersDateRangeInput,
@@ -27,7 +27,7 @@ const MAX_PAGE_SIZE = 100;
 
 @Injectable()
 export class OrdersQueryService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly ordersRepository: OrdersRepository) {}
 
   async listOrdersConnection(
     filter: FindOrdersFilterInput = {},
@@ -66,35 +66,18 @@ export class OrdersQueryService {
     input: FindOrdersDateRangeInput,
   ): Promise<Order[]> {
     const { dateFrom, dateTo } = this.normalizeDateRange(input);
-    const query = this.dataSource
-      .getRepository(Order)
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.items', 'item')
-      .orderBy('order.created_at', 'DESC');
-
-    if (dateFrom) query.andWhere('order.created_at >= :dateFrom', { dateFrom });
-    if (dateTo) query.andWhere('order.created_at <= :dateTo', { dateTo });
-
-    return query.getMany();
+    return this.ordersRepository.findOrdersByDateRange({ dateFrom, dateTo });
   }
 
   private async findOrdersByFilter(
     filter: FindOrdersFilterInput,
   ): Promise<Order[]> {
     const { dateFrom, dateTo } = this.normalizeDateRange(filter);
-    const query = this.dataSource
-      .getRepository(Order)
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.items', 'item')
-      .orderBy('order.created_at', 'DESC')
-      .addOrderBy('order.id', 'DESC');
-
-    if (filter.status)
-      query.andWhere('order.status = :status', { status: filter.status });
-    if (dateFrom) query.andWhere('order.created_at >= :dateFrom', { dateFrom });
-    if (dateTo) query.andWhere('order.created_at <= :dateTo', { dateTo });
-
-    return query.getMany();
+    return this.ordersRepository.findOrdersByFilter({
+      status: filter.status,
+      dateFrom,
+      dateTo,
+    });
   }
 
   private normalizePagination({
