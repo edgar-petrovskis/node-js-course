@@ -14,7 +14,11 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
-import { OrdersResolver } from './interfaces/graphql/orders.resolver';
+import { ProductLoader } from './interfaces/graphql/loaders/product.loader';
+import {
+  OrderItemResolver,
+  OrdersResolver,
+} from './interfaces/graphql/orders.resolver';
 import { OrdersModule } from './interfaces/orders/orders.module';
 import { ProductsModule } from './interfaces/products/products.module';
 import { UsersModule } from './interfaces/users/users.module';
@@ -40,6 +44,12 @@ import { UsersModule } from './interfaces/users/users.module';
           database: configService.getOrThrow<string>('database.name'),
         }),
         autoLoadEntities: true,
+        logging:
+          process.env.NODE_ENV !== 'production' ? ['query', 'error'] : false,
+        logger:
+          process.env.NODE_ENV !== 'production'
+            ? 'formatted-console'
+            : 'advanced-console',
       }),
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -64,6 +74,8 @@ import { UsersModule } from './interfaces/users/users.module';
   providers: [
     AppService,
     OrdersResolver,
+    OrderItemResolver,
+    ProductLoader,
     { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: AuthGuard },

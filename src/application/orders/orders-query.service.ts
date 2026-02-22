@@ -3,24 +3,13 @@ import { DataSource } from 'typeorm';
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 
-import { OrderStatus } from '../../domain/orders/order-status';
 import { Order } from '../../infrastructure/entities/order.entity';
 
-export type FindOrdersDateRangeInput = {
-  dateFrom?: Date | string;
-  dateTo?: Date | string;
-};
-
-export type FindOrdersFilterInput = FindOrdersDateRangeInput & {
-  status?: OrderStatus;
-};
-
-export type FindOrdersPaginationInput = {
-  first?: number;
-  after?: string;
-  last?: number;
-  before?: string;
-};
+import {
+  FindOrdersDateRangeInput,
+  FindOrdersFilterInput,
+  FindOrdersPaginationInput,
+} from './contracts/orders-query.contract';
 
 export type OrdersConnection = {
   nodes: Order[];
@@ -40,12 +29,12 @@ const MAX_PAGE_SIZE = 100;
 export class OrdersQueryService {
   constructor(private readonly dataSource: DataSource) {}
 
-  async findOrdersConnection(
+  async listOrdersConnection(
     filter: FindOrdersFilterInput = {},
     pagination: FindOrdersPaginationInput = {},
   ): Promise<OrdersConnection> {
     const normalizedPagination = this.normalizePagination(pagination);
-    const orders = await this.findOrdersForPagination(filter);
+    const orders = await this.findOrdersByFilter(filter);
     const totalCount = orders.length;
     const { startIndex, endIndex } = this.resolveWindowIndices(
       orders,
@@ -55,7 +44,7 @@ export class OrdersQueryService {
     const windowItems = orders.slice(startIndex, endIndex);
     const nodes = normalizedPagination.first
       ? windowItems.slice(0, normalizedPagination.first)
-      : windowItems.slice(windowItems.length - normalizedPagination.last!);
+      : windowItems.slice(windowItems.length - normalizedPagination.last);
     const pageStart = normalizedPagination.first
       ? startIndex
       : endIndex - nodes.length;
@@ -89,7 +78,7 @@ export class OrdersQueryService {
     return query.getMany();
   }
 
-  private async findOrdersForPagination(
+  private async findOrdersByFilter(
     filter: FindOrdersFilterInput,
   ): Promise<Order[]> {
     const { dateFrom, dateTo } = this.normalizeDateRange(filter);

@@ -1,20 +1,14 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { ValidationPipe } from '@nestjs/common';
+import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 
 import { OrdersQueryService } from '../../application/orders/orders-query.service';
-import { OrderStatus } from '../../domain/orders/order-status';
+import { Product } from '../../infrastructure/entities/product.entity';
 
-type OrdersFilterArgs = {
-  status?: OrderStatus;
-  dateFrom?: Date | string;
-  dateTo?: Date | string;
-};
-
-type OrdersPaginationArgs = {
-  first?: number;
-  after?: string;
-  last?: number;
-  before?: string;
-};
+import {
+  OrdersFilterArgsDto,
+  OrdersPaginationArgsDto,
+} from './dto/orders-query-args.dto';
+import { ProductLoader } from './loaders/product.loader';
 
 @Resolver()
 export class OrdersResolver {
@@ -22,9 +16,31 @@ export class OrdersResolver {
 
   @Query('orders')
   orders(
-    @Args('filter', { nullable: true }) filter?: OrdersFilterArgs,
-    @Args('pagination', { nullable: true }) pagination?: OrdersPaginationArgs,
+    @Args(
+      'filter',
+      { nullable: true },
+      new ValidationPipe({ transform: true, whitelist: true }),
+    )
+    filter?: OrdersFilterArgsDto,
+    @Args(
+      'pagination',
+      { nullable: true },
+      new ValidationPipe({ transform: true, whitelist: true }),
+    )
+    pagination?: OrdersPaginationArgsDto,
   ) {
-    return this.ordersQueryService.findOrdersConnection(filter, pagination);
+    return this.ordersQueryService.listOrdersConnection(filter, pagination);
+  }
+}
+
+@Resolver('OrderItem')
+export class OrderItemResolver {
+  constructor(private readonly productLoader: ProductLoader) {}
+
+  @ResolveField('product')
+  async product(
+    @Parent() item: { productId: string },
+  ): Promise<Product | null> {
+    return this.productLoader.load(item.productId);
   }
 }
