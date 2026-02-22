@@ -8,9 +8,9 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 
+import { OrderStatus } from '../../domain/orders/order-status';
 import { OrderItem } from '../../infrastructure/entities/order-item.entity';
 import { Order } from '../../infrastructure/entities/order.entity';
-import { OrderStatus } from '../../infrastructure/entities/order.entity';
 import { Product } from '../../infrastructure/entities/product.entity';
 
 type OrderItemInput = {

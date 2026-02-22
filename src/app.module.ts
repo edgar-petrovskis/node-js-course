@@ -1,6 +1,10 @@
+import { join } from 'node:path';
+
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { GraphQLISODateTime, GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
@@ -10,6 +14,11 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
+import { ProductLoader } from './interfaces/graphql/loaders/product.loader';
+import {
+  OrderItemResolver,
+  OrdersResolver,
+} from './interfaces/graphql/orders.resolver';
 import { OrdersModule } from './interfaces/orders/orders.module';
 import { ProductsModule } from './interfaces/products/products.module';
 import { UsersModule } from './interfaces/users/users.module';
@@ -35,7 +44,27 @@ import { UsersModule } from './interfaces/users/users.module';
           database: configService.getOrThrow<string>('database.name'),
         }),
         autoLoadEntities: true,
+        logging:
+          process.env.NODE_ENV !== 'production' ? ['query', 'error'] : false,
+        logger:
+          process.env.NODE_ENV !== 'production'
+            ? 'formatted-console'
+            : 'advanced-console',
       }),
+    }),
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      typePaths: ['./**/*.graphql'],
+      definitions: {
+        path: join(process.cwd(), 'src/interfaces/graphql/graphql.ts'),
+        outputAs: 'class',
+      },
+      resolvers: {
+        DateTime: GraphQLISODateTime,
+      },
+      path: '/graphql',
+      playground: process.env.NODE_ENV !== 'production',
+      introspection: process.env.NODE_ENV !== 'production',
     }),
     UsersModule,
     OrdersModule,
@@ -44,6 +73,9 @@ import { UsersModule } from './interfaces/users/users.module';
   controllers: [AppController],
   providers: [
     AppService,
+    OrdersResolver,
+    OrderItemResolver,
+    ProductLoader,
     { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: AuthGuard },
