@@ -68,7 +68,6 @@ type OrdersConnection {
 }
 
 type Query {
-  hello: String!
   orders(
     filter: OrdersFilterInput
     pagination: OrdersPaginationInput

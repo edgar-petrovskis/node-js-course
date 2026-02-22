@@ -76,8 +76,6 @@ export class OrdersConnection {
 }
 
 export abstract class IQuery {
-    abstract hello(): string | Promise<string>;
-
     abstract orders(filter?: Nullable<OrdersFilterInput>, pagination?: Nullable<OrdersPaginationInput>): OrdersConnection | Promise<OrdersConnection>;
 }
 

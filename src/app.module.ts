@@ -14,7 +14,7 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
-import { HealthResolver } from './interfaces/graphql/health.resolver';
+import { OrdersResolver } from './interfaces/graphql/orders.resolver';
 import { OrdersModule } from './interfaces/orders/orders.module';
 import { ProductsModule } from './interfaces/products/products.module';
 import { UsersModule } from './interfaces/users/users.module';
@@ -63,7 +63,7 @@ import { UsersModule } from './interfaces/users/users.module';
   controllers: [AppController],
   providers: [
     AppService,
-    HealthResolver,
+    OrdersResolver,
     { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: AuthGuard },
