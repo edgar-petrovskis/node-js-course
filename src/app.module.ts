@@ -1,5 +1,7 @@
 import { join } from 'node:path';
 
+import type { Request } from 'express';
+
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,9 +13,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthGuard } from './common/guards/auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
+import { AuthModule } from './interfaces/auth/auth.module';
 import { ProductLoader } from './interfaces/graphql/loaders/product.loader';
 import {
   OrderItemResolver,
@@ -68,6 +72,7 @@ const graphqlDefinitions = isProduction
       driver: ApolloDriver,
       typePaths: graphqlTypePaths,
       definitions: graphqlDefinitions,
+      context: (context: { req: Request }) => ({ req: context.req }),
       resolvers: {
         DateTime: GraphQLISODateTime,
       },
@@ -75,6 +80,7 @@ const graphqlDefinitions = isProduction
       playground: !isProduction,
       introspection: !isProduction,
     }),
+    AuthModule,
     UsersModule,
     OrdersModule,
     ProductsModule,
@@ -88,6 +94,7 @@ const graphqlDefinitions = isProduction
     { provide: APP_INTERCEPTOR, useClass: TimeoutInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}
