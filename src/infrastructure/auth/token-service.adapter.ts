@@ -1,74 +1,68 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
 import {
   AuthTokenPayload,
   TokenServicePort,
 } from '../../application/auth/ports/token-service.port';
 
-type JwtPayload = AuthTokenPayload & { exp: number };
 type TokenKind = 'access' | 'refresh';
 
 @Injectable()
 export class TokenServiceAdapter implements TokenServicePort {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
   signAccess(payload: AuthTokenPayload): Promise<string> {
-    return Promise.resolve(this.sign(payload, 'access'));
+    return this.sign(payload, 'access');
   }
 
   signRefresh(payload: AuthTokenPayload): Promise<string> {
-    return Promise.resolve(this.sign(payload, 'refresh'));
+    return this.sign(payload, 'refresh');
   }
 
   verifyAccess(token: string): Promise<AuthTokenPayload> {
-    return Promise.resolve(this.verify(token, 'access'));
+    return this.verify(token, 'access');
   }
 
   verifyRefresh(token: string): Promise<AuthTokenPayload> {
-    return Promise.resolve(this.verify(token, 'refresh'));
+    return this.verify(token, 'refresh');
   }
 
-  private sign(payload: AuthTokenPayload, kind: TokenKind): string {
-    const expiresIn = this.getExpiresInSeconds(kind);
-    const secret = this.getSecret(kind);
-    const header = this.base64UrlEncode(
-      JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
-    );
-    const body = this.base64UrlEncode(
-      JSON.stringify({
-        ...payload,
-        exp: Math.floor(Date.now() / 1000) + expiresIn,
-      }),
-    );
-    const signature = this.signPart(`${header}.${body}`, secret);
-    return `${header}.${body}.${signature}`;
+  private sign(payload: AuthTokenPayload, kind: TokenKind): Promise<string> {
+    return this.jwtService.signAsync(payload, {
+      secret: this.getSecret(kind),
+      expiresIn: this.getExpiresInSeconds(kind),
+      algorithm: 'HS256',
+    });
   }
 
-  private verify(token: string, kind: TokenKind): AuthTokenPayload {
-    const [header, body, signature] = token.split('.');
-    if (!header || !body || !signature) throw new Error('Invalid token');
+  private async verify(
+    token: string,
+    kind: TokenKind,
+  ): Promise<AuthTokenPayload> {
+    const payload = await this.jwtService.verifyAsync<
+      Partial<AuthTokenPayload> & { sub?: unknown; role?: unknown }
+    >(token, {
+      secret: this.getSecret(kind),
+      algorithms: ['HS256'],
+    });
 
-    const secret = this.getSecret(kind);
-    const expectedSignature = this.signPart(`${header}.${body}`, secret);
-    if (
-      Buffer.byteLength(expectedSignature) !== Buffer.byteLength(signature) ||
-      !timingSafeEqual(Buffer.from(expectedSignature), Buffer.from(signature))
-    ) {
-      throw new Error('Invalid token');
+    if (typeof payload.sub !== 'string') {
+      throw new Error('Invalid token payload');
     }
 
-    const payload = JSON.parse(
-      this.base64UrlDecode(body),
-    ) as Partial<JwtPayload>;
-    if (typeof payload.sub !== 'string' || typeof payload.exp !== 'number') {
-      throw new Error('Invalid token');
+    if (payload.role !== undefined && typeof payload.role !== 'string') {
+      throw new Error('Invalid token payload');
     }
-    if (payload.exp <= Math.floor(Date.now() / 1000))
-      throw new Error('Token expired');
-    return { sub: payload.sub, role: payload.role };
+
+    return {
+      sub: payload.sub,
+      role: payload.role,
+    };
   }
 
   private getSecret(kind: TokenKind): string {
@@ -89,17 +83,5 @@ export class TokenServiceAdapter implements TokenServicePort {
     const multiplier =
       unit === 's' ? 1 : unit === 'm' ? 60 : unit === 'h' ? 3600 : 86400;
     return amount * multiplier;
-  }
-
-  private signPart(value: string, secret: string): string {
-    return createHmac('sha256', secret).update(value).digest('base64url');
-  }
-
-  private base64UrlEncode(value: string): string {
-    return Buffer.from(value, 'utf8').toString('base64url');
-  }
-
-  private base64UrlDecode(value: string): string {
-    return Buffer.from(value, 'base64url').toString('utf8');
   }
 }

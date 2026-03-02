@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthService } from '../../application/auth/auth.service';
@@ -15,7 +16,11 @@ export const PASSWORD_HASHER_PORT = Symbol('PASSWORD_HASHER_PORT');
 export const TOKEN_SERVICE_PORT = Symbol('TOKEN_SERVICE_PORT');
 
 @Module({
-  imports: [ConfigModule, TypeOrmModule.forFeature([User])],
+  imports: [
+    ConfigModule,
+    JwtModule.register({}),
+    TypeOrmModule.forFeature([User]),
+  ],
   controllers: [AuthController],
   providers: [
     UsersRepository,
