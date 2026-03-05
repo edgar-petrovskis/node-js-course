@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { GraphQLISODateTime, GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -23,6 +22,18 @@ import {
 import { OrdersModule } from './interfaces/orders/orders.module';
 import { ProductsModule } from './interfaces/products/products.module';
 import { UsersModule } from './interfaces/users/users.module';
+
+const isProduction = process.env.NODE_ENV === 'production';
+const graphqlTypePaths = [
+  join(__dirname, 'interfaces/graphql/**/*.graphql'),
+  join(process.cwd(), 'src/interfaces/graphql/**/*.graphql'),
+];
+const graphqlDefinitions = isProduction
+  ? undefined
+  : {
+      path: join(process.cwd(), 'src/interfaces/graphql/graphql.ts'),
+      outputAs: 'class' as const,
+    };
 
 @Module({
   imports: [
@@ -55,17 +66,14 @@ import { UsersModule } from './interfaces/users/users.module';
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      typePaths: ['./**/*.graphql'],
-      definitions: {
-        path: join(process.cwd(), 'src/interfaces/graphql/graphql.ts'),
-        outputAs: 'class',
-      },
+      typePaths: graphqlTypePaths,
+      definitions: graphqlDefinitions,
       resolvers: {
         DateTime: GraphQLISODateTime,
       },
       path: '/graphql',
-      playground: process.env.NODE_ENV !== 'production',
-      introspection: process.env.NODE_ENV !== 'production',
+      playground: !isProduction,
+      introspection: !isProduction,
     }),
     UsersModule,
     OrdersModule,
