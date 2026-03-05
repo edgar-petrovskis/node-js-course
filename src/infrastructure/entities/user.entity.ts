@@ -7,10 +7,7 @@ import {
   Index,
 } from 'typeorm';
 
-export enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN',
-}
+import { Role } from '../../domain/users/role';
 
 @Entity({ name: 'users' })
 export class User {
@@ -24,8 +21,8 @@ export class User {
   @Column({ type: 'text', name: 'password_hash' })
   passwordHash!: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
-  role!: UserRole;
+  @Column({ type: 'enum', enum: Role, default: Role.USER })
+  role!: Role;
 
   @Column({ type: 'text', nullable: true, name: 'refresh_token_hash' })
   refreshTokenHash!: string | null;

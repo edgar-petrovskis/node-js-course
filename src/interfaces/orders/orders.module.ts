@@ -6,14 +6,13 @@ import { OrdersService } from '../../application/orders/orders.service';
 import { OrderItem } from '../../infrastructure/entities/order-item.entity';
 import { Order } from '../../infrastructure/entities/order.entity';
 import { Product } from '../../infrastructure/entities/product.entity';
-import { User } from '../../infrastructure/entities/user.entity';
 import { OrdersRepository } from '../../infrastructure/repositories/orders.repository';
 import { ProductsRepository } from '../../infrastructure/repositories/products.repository';
 
 import { OrdersController } from './orders.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, OrderItem, Product, User])],
+  imports: [TypeOrmModule.forFeature([Order, OrderItem, Product])],
   controllers: [OrdersController],
   providers: [
     OrdersService,

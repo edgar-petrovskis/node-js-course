@@ -20,6 +20,10 @@ Backend API for a learning e-commerce project (coffee store) built with NestJS +
 - `src/config/*` - application configuration and env mapping
 - `src/infrastructure/*` - database config, entities, repositories, migrations, swagger setup
 
+## Documentation
+
+- Auth guide: `docs/auth.md`
+
 ## Prerequisites
 
 - Docker
@@ -135,6 +139,11 @@ Required variables:
 - `DATABASE_NAME`
 - `JWT_SECRET`
 - `JWT_REFRESH_SECRET`
+
+Optional auth variables:
+
+- `JWT_ACCESS_TTL` (default `15m`)
+- `JWT_REFRESH_TTL` (default `7d`)
 
 ## Clean run log
 
