@@ -3,7 +3,6 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 RUN corepack enable && corepack prepare yarn@4.12.0 --activate
 RUN yarn install --immutable
 
@@ -26,7 +25,6 @@ FROM node:22-alpine AS prod
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 RUN corepack enable && corepack prepare yarn@4.12.0 --activate
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
