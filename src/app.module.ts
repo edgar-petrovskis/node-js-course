@@ -14,6 +14,7 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
+import { FilesModule } from './interfaces/files/files.module';
 import { ProductLoader } from './interfaces/graphql/loaders/product.loader';
 import {
   OrderItemResolver,
@@ -75,6 +76,7 @@ const graphqlDefinitions = isProduction
       playground: !isProduction,
       introspection: !isProduction,
     }),
+    FilesModule,
     UsersModule,
     OrdersModule,
     ProductsModule,
