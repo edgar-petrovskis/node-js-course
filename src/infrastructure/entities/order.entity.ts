@@ -10,14 +10,10 @@ import {
   Index,
 } from 'typeorm';
 
+import { OrderStatus } from '../../domain/orders/order-status';
+
 import { OrderItem } from './order-item.entity';
 import { User } from './user.entity';
-
-export enum OrderStatus {
-  NEW = 'NEW',
-  PAID = 'PAID',
-  CANCELED = 'CANCELED',
-}
 
 @Entity({ name: 'orders' })
 @Index(['userId', 'idempotencyKey'], { unique: true })
