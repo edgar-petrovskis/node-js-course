@@ -11,7 +11,7 @@ export type FileActor = {
   role: Role;
 };
 
-export type PresignFileInput = {
+export type PresignFileArgs = {
   purpose: FilePurpose;
   entityId?: string;
   contentType: FileContentType;
@@ -26,11 +26,19 @@ export type PresignFileResult = {
   contentType: FileContentType;
 };
 
-export type CompleteFileInput = {
+export type CompleteFileArgs = {
   fileId: string;
 };
 
 export type CompleteFileResult = {
   fileId: string;
   status: FileStatus;
+};
+
+export type ViewFileArgs = {
+  fileId: string;
+};
+
+export type ViewFileResult = {
+  url: string;
 };

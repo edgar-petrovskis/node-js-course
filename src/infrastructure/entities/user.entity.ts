@@ -27,6 +27,10 @@ export class User {
   @Column({ type: 'text', nullable: true, name: 'refresh_token_hash' })
   refreshTokenHash!: string | null;
 
+  @Index()
+  @Column({ type: 'uuid', nullable: true, name: 'avatar_file_id' })
+  avatarFileId!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 

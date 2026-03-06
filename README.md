@@ -61,16 +61,39 @@ docker compose -f compose.yml -f compose.dev.yml up --build
 docker compose -f compose.yml -f compose.dev.yml run --rm migrate
 ```
 
-4. Seed initial data:
+4. Initialize MinIO bucket (one-off):
+
+```bash
+docker compose -f compose.yml -f compose.dev.yml --profile tools run --rm minio-init
+```
+
+5. Seed initial data:
 
 ```bash
 docker compose -f compose.yml -f compose.dev.yml run --rm seed
 ```
 
-5. API endpoints:
+6. API endpoints:
 
 - API: `http://localhost:8080`
 - Swagger: `http://localhost:8080/api`
+
+## MinIO (Dev Storage)
+
+Files API uses S3-compatible storage in development via MinIO.
+
+- MinIO server (`minio` service) runs as part of dev stack.
+- Bucket initialization (`minio-init`) is a one-off tools job.
+
+MinIO endpoints in dev:
+
+- S3 API: `http://localhost:9000`
+- MinIO Console: `http://localhost:9001`
+
+Notes:
+
+- Re-run `minio-init` only when using a fresh MinIO volume or a new bucket name.
+- Presigned URLs are signed for the internal host (`minio:9000`), so local Postman PUT/GET may require header `Host: minio:9000`.
 
 ## Run prod-like stack
 

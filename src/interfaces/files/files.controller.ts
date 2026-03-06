@@ -1,6 +1,15 @@
 import type { Request } from 'express';
 
-import { Body, Controller, Post, Req, ValidationPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  ValidationPipe,
+} from '@nestjs/common';
 
 import type { UserRecord } from '../../application/auth/ports/users-repository.port';
 import { FilesService } from '../../application/files/files.service';
@@ -39,5 +48,13 @@ export class FilesController {
     dto: CompleteFileDto,
   ) {
     return this.filesService.complete({ id: request.user.id }, dto);
+  }
+
+  @Get(':id/view')
+  view(
+    @Req() request: Request & { user: UserRecord },
+    @Param('id', ParseUUIDPipe) fileId: string,
+  ) {
+    return this.filesService.view({ id: request.user.id }, { fileId });
   }
 }

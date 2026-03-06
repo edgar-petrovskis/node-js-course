@@ -8,8 +8,7 @@ import { S3FileStorageAdapter } from '../../infrastructure/files/s3-file-storage
 import { FileRecordsRepository } from '../../infrastructure/repositories/file-records.repository';
 
 import { FilesController } from './files.controller';
-
-export const FILE_STORAGE_PORT = Symbol('FILE_STORAGE_PORT');
+import { FILE_STORAGE_PORT } from './files.tokens';
 
 @Module({
   imports: [ConfigModule, TypeOrmModule.forFeature([FileRecord])],
