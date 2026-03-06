@@ -7,20 +7,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-export enum FilePurpose {
-  USER_AVATAR = 'USER_AVATAR',
-  PRODUCT_IMAGE = 'PRODUCT_IMAGE',
-}
-
-export enum FileStatus {
-  PENDING = 'PENDING',
-  READY = 'READY',
-}
-
-export enum FileVisibility {
-  PRIVATE = 'PRIVATE',
-  PUBLIC = 'PUBLIC',
-}
+import {
+  FilePurpose,
+  FileStatus,
+  FileVisibility,
+} from '../../domain/files/files';
 
 @Entity({ name: 'file_records' })
 @Index(['ownerId'])

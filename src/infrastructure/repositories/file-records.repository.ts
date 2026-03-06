@@ -4,11 +4,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import {
-  FileRecord,
   FilePurpose,
   FileStatus,
   FileVisibility,
-} from '../entities/file-record.entity';
+} from '../../domain/files/files';
+import { FileRecord } from '../entities/file-record.entity';
 
 export type CreatePendingFileRecordInput = {
   ownerId: string;
