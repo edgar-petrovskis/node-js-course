@@ -23,6 +23,8 @@ Backend API for a learning e-commerce project (coffee store) built with NestJS +
 ## Documentation
 
 - Auth guide: `docs/auth.md`
+- Files guide: `docs/files.md`
+- Testing guide: `docs/testing.md`
 
 ## Prerequisites
 
