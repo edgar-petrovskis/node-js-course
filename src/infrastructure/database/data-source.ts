@@ -1,5 +1,6 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 
+import { FileRecord } from '../entities/file-record.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Order } from '../entities/order.entity';
 import { Product } from '../entities/product.entity';
@@ -43,7 +44,7 @@ const AppDataSource = new DataSource({
     password: process.env.DATABASE_PASSWORD ?? 'postgres',
     database: process.env.DATABASE_NAME ?? 'node_course',
   }),
-  entities: [User, Product, Order, OrderItem],
+  entities: [User, Product, Order, OrderItem, FileRecord],
   migrations: [
     process.env.NODE_ENV === 'production'
       ? 'dist/src/infrastructure/database/migrations/*{.ts,.js}'

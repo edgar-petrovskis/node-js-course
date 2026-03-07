@@ -18,6 +18,7 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
 import { AuthModule } from './interfaces/auth/auth.module';
+import { FilesModule } from './interfaces/files/files.module';
 import { ProductLoader } from './interfaces/graphql/loaders/product.loader';
 import {
   OrderItemResolver,
@@ -81,6 +82,7 @@ const graphqlDefinitions = isProduction
       introspection: !isProduction,
     }),
     AuthModule,
+    FilesModule,
     UsersModule,
     OrdersModule,
     ProductsModule,

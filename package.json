@@ -19,12 +19,17 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e:db": "DATABASE_HOST=localhost DATABASE_PORT=5433 DATABASE_USER=postgres DATABASE_PASSWORD=change_me DATABASE_NAME=node_course jest --config ./test/jest-e2e.json --runInBand",
+    "test:e2e:db:file": "DATABASE_HOST=localhost DATABASE_PORT=5433 DATABASE_USER=postgres DATABASE_PASSWORD=change_me DATABASE_NAME=node_course jest --config ./test/jest-e2e.json --runInBand",
+    "test:integration:db": "DATABASE_HOST=localhost DATABASE_PORT=5433 DATABASE_USER=postgres DATABASE_PASSWORD=change_me DATABASE_NAME=node_course jest --runInBand",
     "typecheck": "tsc --noEmit",
     "seed": "node dist/scripts/seed.js"
   },
   "dependencies": {
     "@apollo/server": "^5.4.0",
     "@as-integrations/express5": "^1.1.2",
+    "@aws-sdk/client-s3": "^3.1002.0",
+    "@aws-sdk/s3-request-presigner": "^3.1002.0",
     "@nestjs/apollo": "^13.2.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
