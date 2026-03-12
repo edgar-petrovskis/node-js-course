@@ -23,4 +23,10 @@ export default () => ({
     publicBaseUrl: process.env.STORAGE_PUBLIC_BASE_URL,
     cloudfrontBaseUrl: process.env.CLOUDFRONT_BASE_URL,
   },
+  rabbitmq: {
+    url: process.env.RABBITMQ_URL,
+    exchange: process.env.RABBITMQ_EXCHANGE,
+    queueProcess: process.env.RABBITMQ_QUEUE_PROCESS,
+    queueDlq: process.env.RABBITMQ_QUEUE_DLQ,
+  },
 });

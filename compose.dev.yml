@@ -16,6 +16,10 @@ services:
       DATABASE_NAME: ${DATABASE_NAME}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL is required}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-orders}
+      RABBITMQ_QUEUE_PROCESS: ${RABBITMQ_QUEUE_PROCESS:-orders.process}
+      RABBITMQ_QUEUE_DLQ: ${RABBITMQ_QUEUE_DLQ:-orders.dlq}
       STORAGE_ENDPOINT: http://minio:9000
       STORAGE_REGION: ${STORAGE_REGION:-eu-central-1}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minioadmin}
@@ -24,6 +28,9 @@ services:
       STORAGE_FORCE_PATH_STYLE: ${STORAGE_FORCE_PATH_STYLE:-true}
       CHOKIDAR_USEPOLLING: 'true'
       CHOKIDAR_INTERVAL: '300'
+    depends_on:
+      rabbitmq:
+        condition: service_started
     command: ['yarn', 'start:dev']
     volumes:
       - ./:/app
