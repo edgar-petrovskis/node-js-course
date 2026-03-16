@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { OrdersProcessingService } from '../../application/orders/orders-processing.service';
 import { OrdersQueryService } from '../../application/orders/orders-query.service';
 import { OrdersService } from '../../application/orders/orders.service';
 import { OrderItem } from '../../infrastructure/entities/order-item.entity';
@@ -23,6 +24,7 @@ import { OrdersWorker } from './orders.worker';
   controllers: [OrdersController],
   providers: [
     OrdersService,
+    OrdersProcessingService,
     OrdersQueryService,
     OrdersRepository,
     ProductsRepository,

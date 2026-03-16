@@ -5,7 +5,7 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { OrderProcessingResult } from '../../application/orders/contracts/order-processing-result.contract';
-import { OrdersService } from '../../application/orders/orders.service';
+import { OrdersProcessingService } from '../../application/orders/orders-processing.service';
 import { RABBIT_CHANNEL } from '../../infrastructure/rabbit/rabbit.tokens';
 
 type OrderProcessMessage = {
@@ -25,7 +25,7 @@ export class OrdersWorker implements OnModuleInit {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly ordersService: OrdersService,
+    private readonly ordersProcessingService: OrdersProcessingService,
     @Inject(RABBIT_CHANNEL)
     private readonly channel: ConfirmChannel,
   ) {}
@@ -58,7 +58,7 @@ export class OrdersWorker implements OnModuleInit {
     }
 
     try {
-      const result = await this.ordersService.processPendingOrder(
+      const result = await this.ordersProcessingService.processPendingOrder(
         parsed.messageId,
         parsed.orderId,
       );
