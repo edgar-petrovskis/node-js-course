@@ -2,7 +2,6 @@ import { DataSource, QueryFailedError } from 'typeorm';
 
 import {
   BadRequestException,
-  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -12,6 +11,7 @@ import { OrderStatus } from '../../domain/orders/order-status';
 import { OrderItem } from '../../infrastructure/entities/order-item.entity';
 import { Order } from '../../infrastructure/entities/order.entity';
 import { Product } from '../../infrastructure/entities/product.entity';
+import { OrdersPublisher } from '../../infrastructure/rabbit/orders.publisher';
 
 type OrderItemInput = {
   productId: string;
@@ -28,9 +28,12 @@ const PG_UNIQUE_VIOLATION_CODE = '23505';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly ordersPublisher: OrdersPublisher,
+  ) {}
 
-  async createOrder(
+  async createPendingOrder(
     userId: string,
     idempotencyKey: string,
     items: OrderItemInput[],
@@ -46,11 +49,13 @@ export class OrdersService {
     }
 
     try {
-      const createdOrder = await this.createOrderInTransaction(
+      const createdOrder = await this.createPendingOrderInTransaction(
         userId,
         idempotencyKey,
         normalizedItems,
       );
+
+      await this.ordersPublisher.publishOrderProcessing(createdOrder.id);
 
       return { order: createdOrder, isDuplicate: false };
     } catch (error) {
@@ -97,7 +102,7 @@ export class OrdersService {
     );
   }
 
-  private async createOrderInTransaction(
+  private async createPendingOrderInTransaction(
     userId: string,
     idempotencyKey: string,
     items: OrderItemInput[],
@@ -112,17 +117,14 @@ export class OrdersService {
       const orderItemRepository = queryRunner.manager.getRepository(OrderItem);
       const productIds = items.map((item) => item.productId);
 
-      const lockedProducts = await productRepository
+      const products = await productRepository
         .createQueryBuilder('product')
         .where('product.id IN (:...productIds)', { productIds })
-        .setLock('for_no_key_update')
         .getMany();
 
-      const lockedProductIds = new Set(
-        lockedProducts.map((product) => product.id),
-      );
+      const productIdsSet = new Set(products.map((product) => product.id));
       const missingProductIds = productIds.filter(
-        (productId) => !lockedProductIds.has(productId),
+        (productId) => !productIdsSet.has(productId),
       );
 
       if (missingProductIds.length > 0) {
@@ -130,28 +132,8 @@ export class OrdersService {
       }
 
       const productById = new Map(
-        lockedProducts.map((product) => [product.id, product]),
+        products.map((product) => [product.id, product]),
       );
-
-      const outOfStockItems = items.filter((item) => {
-        const product = productById.get(item.productId);
-        return !!product && product.stock < item.quantity;
-      });
-
-      if (outOfStockItems.length > 0) {
-        throw new ConflictException('Insufficient stock');
-      }
-
-      const distinctCurrencies = new Set(
-        lockedProducts.map((product) => product.currency),
-      );
-
-      if (distinctCurrencies.size > 1) {
-        throw new BadRequestException('Invalid order items');
-      }
-
-      let totalAmountCents = 0;
-      const nextProductsState: Product[] = [];
       const orderItemsToCreate: Array<{
         productId: string;
         quantity: number;
@@ -166,11 +148,6 @@ export class OrdersService {
           throw new BadRequestException('One or more products are invalid');
         }
 
-        totalAmountCents += product.priceCents * item.quantity;
-        nextProductsState.push({
-          ...product,
-          stock: product.stock - item.quantity,
-        });
         orderItemsToCreate.push({
           productId: item.productId,
           quantity: item.quantity,
@@ -179,15 +156,13 @@ export class OrdersService {
         });
       }
 
-      await productRepository.save(nextProductsState);
-
-      const orderCurrency = lockedProducts[0]?.currency ?? 'UAH';
+      const orderCurrency = products[0]?.currency ?? 'UAH';
       const createdOrder = await orderRepository.save(
         orderRepository.create({
           userId,
           idempotencyKey,
-          status: OrderStatus.NEW,
-          totalAmountCents,
+          status: OrderStatus.PENDING,
+          totalAmountCents: 0,
           currency: orderCurrency,
         }),
       );

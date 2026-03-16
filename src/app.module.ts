@@ -17,6 +17,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import configuration from './config/configuration';
 import { createDatabaseOptions } from './infrastructure/database/data-source';
+import { RabbitModule } from './infrastructure/rabbit/rabbit.module';
 import { AuthModule } from './interfaces/auth/auth.module';
 import { FilesModule } from './interfaces/files/files.module';
 import { ProductLoader } from './interfaces/graphql/loaders/product.loader';
@@ -86,6 +87,7 @@ const graphqlDefinitions = isProduction
     UsersModule,
     OrdersModule,
     ProductsModule,
+    RabbitModule,
   ],
   controllers: [AppController],
   providers: [

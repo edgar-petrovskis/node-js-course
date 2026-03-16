@@ -26,6 +26,104 @@ Backend API for a learning e-commerce project (coffee store) built with NestJS +
 - Files guide: `docs/files.md`
 - Testing guide: `docs/testing.md`
 
+## RabbitMQ Orders Processing
+
+Orders processing is asynchronous.
+
+Flow:
+
+1. `POST /orders` creates an order with status `PENDING`.
+2. API publishes a message to RabbitMQ queue `orders.process`.
+3. Worker consumes the message and processes the order asynchronously.
+4. On success, the order becomes `PROCESSED`.
+5. On business failure, the order becomes `FAILED`.
+6. On technical failure, the worker retries processing up to the configured limit.
+7. After the retry limit is exhausted, the message is sent to `orders.dlq`.
+
+The implementation includes:
+
+- manual ack
+- retry with republish + ack
+- dead-letter queue (`orders.dlq`)
+- idempotent worker processing via `processed_messages`
+
+### Topology
+
+- Exchange: `orders` (`direct`)
+- Queue: `orders.process`
+- Queue: `orders.dlq`
+- Routing key: `orders.process` -> `orders.process`
+- Routing key: `orders.dlq` -> `orders.dlq`
+
+Message flow:
+
+1. API publishes order processing messages to exchange `orders` with routing key `orders.process`.
+2. Queue `orders.process` delivers messages to the worker.
+3. On retry, the worker republishes the message back to exchange `orders` with routing key `orders.process`.
+4. After retry limit is exhausted, the worker publishes the message to exchange `orders` with routing key `orders.dlq`.
+
+### Retry And DLQ Strategy
+
+The selected retry strategy is `republish + ack`.
+
+- Maximum attempts: `3`
+- The worker reads `attempt` from the message payload.
+- For technical failures, the worker republishes the same message to `orders.process` with `attempt + 1`, waits for broker confirm, and only then acknowledges the original message.
+- After the retry limit is exhausted, the worker publishes the message to `orders.dlq` and acknowledges the original message.
+- Business failures such as insufficient stock do not use retry. In this case, the order is marked as `FAILED` and the message is acknowledged immediately.
+
+### Idempotency
+
+RabbitMQ provides at-least-once delivery, so the worker must handle duplicate deliveries safely.
+
+Idempotency is implemented with table `processed_messages`:
+
+- `message_id` is the primary key
+- `order_id` links the processed message to the order
+- duplicate delivery with the same `messageId` causes a unique constraint violation
+
+Worker behavior:
+
+1. Start a database transaction.
+2. Try to insert a row into `processed_messages`.
+3. If the insert succeeds, continue normal order processing.
+4. If the insert fails because `message_id` already exists, treat the message as duplicate and acknowledge it without reprocessing side effects.
+
+### Demonstration
+
+The examples below assume:
+
+- API is running on `http://localhost:8080`
+- RabbitMQ UI is running on `http://localhost:15672`
+- a valid Bearer token is available
+- at least one valid `productId` exists in the database
+
+#### 7.1 Happy Path
+
+1. Call `POST /orders` with a valid `Idempotency-Key` and a valid product.
+2. Observe the immediate API response with `status: PENDING`.
+3. Wait a short time and verify in the database that the order becomes `PROCESSED`, `total_amount_cents` is calculated, and `processed_at` is set.
+
+#### 7.2 Retry
+
+1. Temporarily introduce a controlled technical failure in worker processing.
+2. Create an order that triggers this failure.
+3. Check API logs and verify `result=retry` appears before the retry limit is reached.
+
+#### 7.3 DLQ
+
+1. Keep the controlled technical failure enabled.
+2. Let the same message exhaust the retry limit.
+3. Verify `result=dlq` in logs.
+4. Verify in RabbitMQ UI that `orders.dlq` contains the message.
+
+#### 7.4 Idempotency
+
+1. Create an order and capture its `messageId` from `processed_messages`.
+2. Manually publish the same message again to exchange `orders` with routing key `orders.process`.
+3. Verify worker logs show `result=duplicate`.
+4. Verify the order state and totals do not change after the duplicate delivery.
+
 ## Prerequisites
 
 - Docker

@@ -36,8 +36,14 @@ services:
       DATABASE_NAME: ${DATABASE_NAME:?DATABASE_NAME is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL is required}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-orders}
+      RABBITMQ_QUEUE_PROCESS: ${RABBITMQ_QUEUE_PROCESS:-orders.process}
+      RABBITMQ_QUEUE_DLQ: ${RABBITMQ_QUEUE_DLQ:-orders.dlq}
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - '8080:3000'
@@ -72,6 +78,20 @@ services:
       ]
     networks:
       - internal
+
+  rabbitmq:
+    image: rabbitmq:4.2.4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - internal
+      - public
 
   seed:
     build:

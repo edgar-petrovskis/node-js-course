@@ -1,5 +1,5 @@
 import { isUUID } from 'class-validator';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 
 import {
   BadRequestException,
@@ -8,6 +8,7 @@ import {
   Headers,
   HttpStatus,
   Post,
+  Req,
   Res,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import type { UserRecord } from '../../application/auth/ports/users-repository.port';
 import { OrdersService } from '../../application/orders/orders.service';
 import { Order } from '../../infrastructure/entities/order.entity';
 
@@ -26,8 +28,6 @@ import {
   CreateOrderResponseItemDto,
 } from './dto/create-order-response.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
-
-const STUB_USER_ID = '00000000-0000-0000-0000-000000000001';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -50,6 +50,7 @@ export class OrdersController {
     type: CreateOrderResponseDto,
   })
   async create(
+    @Req() request: Request & { user: UserRecord },
     @Headers('idempotency-key') idempotencyKey: string,
     @Body() dto: CreateOrderDto,
     @Res({ passthrough: true }) response: Response,
@@ -58,8 +59,8 @@ export class OrdersController {
       throw new BadRequestException('Idempotency-Key must be a valid UUID');
     }
 
-    const result = await this.ordersService.createOrder(
-      STUB_USER_ID,
+    const result = await this.ordersService.createPendingOrder(
+      request.user.id,
       idempotencyKey,
       dto.items,
     );
