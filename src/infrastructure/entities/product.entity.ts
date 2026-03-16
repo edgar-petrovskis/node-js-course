@@ -33,6 +33,10 @@ export class Product {
   @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive!: boolean;
 
+  @Index()
+  @Column({ type: 'uuid', nullable: true, name: 'image_file_id' })
+  imageFileId!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
