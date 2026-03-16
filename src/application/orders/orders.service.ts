@@ -2,7 +2,6 @@ import { DataSource, QueryFailedError } from 'typeorm';
 
 import {
   BadRequestException,
-  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -11,7 +10,11 @@ import {
 import { OrderStatus } from '../../domain/orders/order-status';
 import { OrderItem } from '../../infrastructure/entities/order-item.entity';
 import { Order } from '../../infrastructure/entities/order.entity';
+import { ProcessedMessage } from '../../infrastructure/entities/processed-message.entity';
 import { Product } from '../../infrastructure/entities/product.entity';
+import { OrdersPublisher } from '../../infrastructure/rabbit/orders.publisher';
+
+import { OrderProcessingResult } from './contracts/order-processing-result.contract';
 
 type OrderItemInput = {
   productId: string;
@@ -24,13 +27,17 @@ type CreateOrderResult = {
 };
 
 const ORDER_IDEMPOTENCY_CONSTRAINT = 'UQ_orders_user_id_idempotency_key';
+const PROCESSED_MESSAGES_PK = 'PK_processed_messages_message_id';
 const PG_UNIQUE_VIOLATION_CODE = '23505';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly ordersPublisher: OrdersPublisher,
+  ) {}
 
-  async createOrder(
+  async createPendingOrder(
     userId: string,
     idempotencyKey: string,
     items: OrderItemInput[],
@@ -46,11 +53,13 @@ export class OrdersService {
     }
 
     try {
-      const createdOrder = await this.createOrderInTransaction(
+      const createdOrder = await this.createPendingOrderInTransaction(
         userId,
         idempotencyKey,
         normalizedItems,
       );
+
+      await this.ordersPublisher.publishOrderProcessing(createdOrder.id);
 
       return { order: createdOrder, isDuplicate: false };
     } catch (error) {
@@ -71,6 +80,129 @@ export class OrdersService {
       }
 
       throw new InternalServerErrorException('Internal server error');
+    }
+  }
+
+  async processPendingOrder(
+    messageId: string,
+    orderId: string,
+  ): Promise<OrderProcessingResult> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const processedMessagesRepository =
+        queryRunner.manager.getRepository(ProcessedMessage);
+      const ordersRepository = queryRunner.manager.getRepository(Order);
+      const orderItemsRepository = queryRunner.manager.getRepository(OrderItem);
+      const productsRepository = queryRunner.manager.getRepository(Product);
+
+      await processedMessagesRepository.insert({ messageId, orderId });
+
+      const order = await ordersRepository.findOne({ where: { id: orderId } });
+      if (!order) {
+        throw new InternalServerErrorException('Order not found');
+      }
+
+      await ordersRepository
+        .createQueryBuilder()
+        .update(Order)
+        .set({ status: OrderStatus.PROCESSING })
+        .where('id = :orderId', { orderId })
+        .execute();
+
+      const orderItems = await orderItemsRepository.find({
+        where: { orderId },
+      });
+      if (orderItems.length === 0) {
+        await ordersRepository
+          .createQueryBuilder()
+          .update(Order)
+          .set({ status: OrderStatus.FAILED, processedAt: new Date() })
+          .where('id = :orderId', { orderId })
+          .execute();
+        await queryRunner.commitTransaction();
+
+        return 'failed';
+      }
+
+      const productIds = Array.from(
+        new Set(orderItems.map((item) => item.productId)),
+      );
+      const products = await productsRepository
+        .createQueryBuilder('product')
+        .where('product.id IN (:...productIds)', { productIds })
+        .setLock('for_no_key_update')
+        .getMany();
+
+      const productById = new Map(
+        products.map((product) => [product.id, product]),
+      );
+      const missingProduct = productIds.some(
+        (productId) => !productById.has(productId),
+      );
+      const hasStockIssue = orderItems.some((item) => {
+        const product = productById.get(item.productId);
+        return !product || product.stock < item.quantity;
+      });
+      const hasCurrencyMismatch =
+        new Set(products.map((product) => product.currency)).size > 1;
+
+      if (missingProduct || hasStockIssue || hasCurrencyMismatch) {
+        await ordersRepository
+          .createQueryBuilder()
+          .update(Order)
+          .set({ status: OrderStatus.FAILED, processedAt: new Date() })
+          .where('id = :orderId', { orderId })
+          .execute();
+        await queryRunner.commitTransaction();
+
+        return 'failed';
+      }
+
+      let totalAmountCents = 0;
+      const nextProductsState: Product[] = [];
+      for (const item of orderItems) {
+        const product = productById.get(item.productId);
+        if (!product) {
+          throw new InternalServerErrorException('Product not found');
+        }
+
+        totalAmountCents += item.priceAtPurchaseCents * item.quantity;
+        nextProductsState.push({
+          ...product,
+          stock: product.stock - item.quantity,
+        });
+      }
+
+      await productsRepository.save(nextProductsState);
+      const orderCurrency = products[0]?.currency ?? order.currency;
+
+      await ordersRepository
+        .createQueryBuilder()
+        .update(Order)
+        .set({
+          status: OrderStatus.PROCESSED,
+          totalAmountCents,
+          currency: orderCurrency,
+          processedAt: new Date(),
+        })
+        .where('id = :orderId', { orderId })
+        .execute();
+
+      await queryRunner.commitTransaction();
+      return 'success';
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+
+      if (this.isDuplicateProcessedMessageError(error)) {
+        return 'duplicate';
+      }
+
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 
@@ -97,7 +229,7 @@ export class OrdersService {
     );
   }
 
-  private async createOrderInTransaction(
+  private async createPendingOrderInTransaction(
     userId: string,
     idempotencyKey: string,
     items: OrderItemInput[],
@@ -112,17 +244,14 @@ export class OrdersService {
       const orderItemRepository = queryRunner.manager.getRepository(OrderItem);
       const productIds = items.map((item) => item.productId);
 
-      const lockedProducts = await productRepository
+      const products = await productRepository
         .createQueryBuilder('product')
         .where('product.id IN (:...productIds)', { productIds })
-        .setLock('for_no_key_update')
         .getMany();
 
-      const lockedProductIds = new Set(
-        lockedProducts.map((product) => product.id),
-      );
+      const productIdsSet = new Set(products.map((product) => product.id));
       const missingProductIds = productIds.filter(
-        (productId) => !lockedProductIds.has(productId),
+        (productId) => !productIdsSet.has(productId),
       );
 
       if (missingProductIds.length > 0) {
@@ -130,28 +259,8 @@ export class OrdersService {
       }
 
       const productById = new Map(
-        lockedProducts.map((product) => [product.id, product]),
+        products.map((product) => [product.id, product]),
       );
-
-      const outOfStockItems = items.filter((item) => {
-        const product = productById.get(item.productId);
-        return !!product && product.stock < item.quantity;
-      });
-
-      if (outOfStockItems.length > 0) {
-        throw new ConflictException('Insufficient stock');
-      }
-
-      const distinctCurrencies = new Set(
-        lockedProducts.map((product) => product.currency),
-      );
-
-      if (distinctCurrencies.size > 1) {
-        throw new BadRequestException('Invalid order items');
-      }
-
-      let totalAmountCents = 0;
-      const nextProductsState: Product[] = [];
       const orderItemsToCreate: Array<{
         productId: string;
         quantity: number;
@@ -166,11 +275,6 @@ export class OrdersService {
           throw new BadRequestException('One or more products are invalid');
         }
 
-        totalAmountCents += product.priceCents * item.quantity;
-        nextProductsState.push({
-          ...product,
-          stock: product.stock - item.quantity,
-        });
         orderItemsToCreate.push({
           productId: item.productId,
           quantity: item.quantity,
@@ -179,15 +283,13 @@ export class OrdersService {
         });
       }
 
-      await productRepository.save(nextProductsState);
-
-      const orderCurrency = lockedProducts[0]?.currency ?? 'UAH';
+      const orderCurrency = products[0]?.currency ?? 'UAH';
       const createdOrder = await orderRepository.save(
         orderRepository.create({
           userId,
           idempotencyKey,
-          status: OrderStatus.NEW,
-          totalAmountCents,
+          status: OrderStatus.PENDING,
+          totalAmountCents: 0,
           currency: orderCurrency,
         }),
       );
@@ -246,6 +348,21 @@ export class OrdersService {
     return (
       pgError?.code === PG_UNIQUE_VIOLATION_CODE &&
       pgError?.constraint === ORDER_IDEMPOTENCY_CONSTRAINT
+    );
+  }
+
+  private isDuplicateProcessedMessageError(error: unknown): boolean {
+    if (!(error instanceof QueryFailedError)) {
+      return false;
+    }
+
+    const pgError = error.driverError as
+      | { code?: string; constraint?: string }
+      | undefined;
+
+    return (
+      pgError?.code === PG_UNIQUE_VIOLATION_CODE &&
+      pgError?.constraint === PROCESSED_MESSAGES_PK
     );
   }
 }
