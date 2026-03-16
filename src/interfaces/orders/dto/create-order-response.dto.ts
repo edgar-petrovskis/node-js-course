@@ -15,7 +15,7 @@ export class CreateOrderResponseDto {
   @ApiProperty({ example: '79d01c78-7dc9-4794-82e1-91cfd4bdcc18' })
   id!: string;
 
-  @ApiProperty({ example: 'NEW' })
+  @ApiProperty({ example: 'PENDING' })
   status!: string;
 
   @ApiProperty({ example: 132000 })

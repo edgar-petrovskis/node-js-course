@@ -28,7 +28,7 @@ export class Order {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.NEW })
+  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status!: OrderStatus;
 
   @Column({ type: 'int', default: 0, name: 'total_amount_cents' })
@@ -48,4 +48,7 @@ export class Order {
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
+
+  @Column({ type: 'timestamptz', name: 'processed_at', nullable: true })
+  processedAt!: Date | null;
 }

@@ -1,9 +1,10 @@
 scalar DateTime
 
 enum OrderStatus {
-  NEW
-  PAID
-  CANCELED
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
 }
 
 type Product {

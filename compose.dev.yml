@@ -30,7 +30,7 @@ services:
       CHOKIDAR_INTERVAL: '300'
     depends_on:
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     command: ['yarn', 'start:dev']
     volumes:
       - ./:/app

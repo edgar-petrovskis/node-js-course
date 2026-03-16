@@ -4,10 +4,8 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { RabbitLifecycleService } from './rabbit-lifecycle.service';
+import { RABBIT_CHANNEL, RABBIT_CONNECTION } from './rabbit.tokens';
 import { RabbitTopologyBootstrapService } from './topology.bootstrap.service';
-
-export const RABBIT_CONNECTION = 'RABBIT_CONNECTION';
-export const RABBIT_CHANNEL = 'RABBIT_CHANNEL';
 
 @Module({
   imports: [],
