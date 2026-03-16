@@ -68,6 +68,20 @@ docker compose -f compose.yml -f compose.dev.yml run --rm seed
 - API: `http://localhost:8080`
 - Swagger: `http://localhost:8080/api`
 
+## Dev smoke check
+
+Run this after starting dev stack:
+
+```bash
+curl -s -o /dev/null -w "status=%{http_code}\n" http://localhost:8080/
+```
+
+Expected result:
+
+```text
+status=200
+```
+
 ## Run prod-like stack
 
 Use this mode to run local environment close to production runtime:
