@@ -72,6 +72,7 @@ docker compose -f compose.yml -f compose.dev.yml --profile tools run --rm minio-
 5. Seed initial data:
 
 ```bash
+yarn seed
 docker compose -f compose.yml -f compose.dev.yml run --rm seed
 ```
 
@@ -95,7 +96,62 @@ MinIO endpoints in dev:
 Notes:
 
 - Re-run `minio-init` only when using a fresh MinIO volume or a new bucket name.
+- `minio-init` explicitly applies `anonymous none` to keep the bucket private.
 - Presigned URLs are signed for the internal host (`minio:9000`), so local Postman PUT/GET may require header `Host: minio:9000`.
+
+## HW9 file upload flow
+
+Minimal verification flow for the S3/MinIO homework:
+
+1. Start dev services, run migrations, initialize bucket, and seed data:
+
+```bash
+docker compose -f compose.yml -f compose.dev.yml up --build -d
+docker compose -f compose.yml -f compose.dev.yml run --rm migrate
+docker compose -f compose.yml -f compose.dev.yml --profile tools run --rm minio-init
+yarn seed
+```
+
+2. Log in and obtain an access token:
+
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@coffee.local","password":"User123!"}'
+```
+
+3. Request a presigned upload URL:
+
+```bash
+curl -X POST http://localhost:8080/files/presign \
+  -H 'Authorization: Bearer <ACCESS_TOKEN>' \
+  -H 'Content-Type: application/json' \
+  -d '{"purpose":"USER_AVATAR","contentType":"image/jpeg","size":12345,"visibility":"PRIVATE"}'
+```
+
+4. Upload the file directly to MinIO using the returned `uploadUrl`:
+
+- If you are calling MinIO from the host machine, replace `http://minio:9000` in the returned URL with `http://localhost:9000`.
+- Keep header `Host: minio:9000`.
+- Send the file with matching `Content-Type`.
+
+5. Finalize the upload:
+
+```bash
+curl -X POST http://localhost:8080/files/complete \
+  -H 'Authorization: Bearer <ACCESS_TOKEN>' \
+  -H 'Content-Type: application/json' \
+  -d '{"fileId":"<FILE_ID>"}'
+```
+
+6. Request a view URL:
+
+```bash
+curl -X GET http://localhost:8080/files/<FILE_ID>/view \
+  -H 'Authorization: Bearer <ACCESS_TOKEN>'
+```
+
+More details and examples are documented in `docs/files.md`.
 
 ## Run prod-like stack
 

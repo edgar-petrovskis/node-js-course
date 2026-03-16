@@ -8,10 +8,10 @@ Run unit tests:
 yarn test
 ```
 
-Run all e2e tests from host machine (with DB env):
+Run all base e2e tests from host machine:
 
 ```bash
-yarn test:e2e:db
+yarn test:e2e
 ```
 
 Run a single e2e spec from host machine:
@@ -28,7 +28,7 @@ RUN_DB_INTEGRATION_TESTS=1 yarn test:integration:db src/application/files/files.
 
 ## Notes
 
-1. Use `yarn test:e2e:db` from host machine, not plain `yarn test:e2e`.
+1. Use plain `yarn test:e2e` for the base e2e suite.
 2. `RUN_DB_E2E_TESTS=1` gates `test/files.e2e-spec.ts`.
 3. `RUN_DB_INTEGRATION_TESTS=1` gates `src/application/files/files.service.integration.spec.ts`.
 4. In dev compose mode Postgres is exposed as `localhost:5433`.

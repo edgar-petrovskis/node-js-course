@@ -1,10 +1,10 @@
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
 import dotenv from 'dotenv';
-import { In } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 
 import { Role } from '../src/domain/users/role';
-import dataSource from '../src/infrastructure/database/data-source';
 import { Product } from '../src/infrastructure/entities/product.entity';
 import { User } from '../src/infrastructure/entities/user.entity';
 
@@ -13,6 +13,8 @@ const envFile =
   (existsSync('.env.local') ? '.env.local' : '.env');
 
 dotenv.config({ path: envFile });
+
+const moduleRequire = createRequire(__filename);
 
 const usersSeed = [
   {
@@ -131,6 +133,12 @@ async function seed() {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('Seeding is disabled in production');
   }
+
+  const { default: dataSource } = moduleRequire(
+    '../src/infrastructure/database/data-source',
+  ) as {
+    default: DataSource;
+  };
 
   await dataSource.initialize();
 
