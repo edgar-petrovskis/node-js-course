@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USER:?DATABASE_USER is required}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      POSTGRES_DB: ${DATABASE_NAME:?DATABASE_NAME is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    image: ${APP_IMAGE:?APP_IMAGE is required}
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${DATABASE_USER:?DATABASE_USER is required}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      DATABASE_NAME: ${DATABASE_NAME:?DATABASE_NAME is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+    ports:
+      - '${APP_PORT:-8080}:3000'
+
+volumes:
+  postgres_data:
