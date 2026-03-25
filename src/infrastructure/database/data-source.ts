@@ -44,7 +44,11 @@ const AppDataSource = new DataSource({
     database: process.env.DATABASE_NAME ?? 'node_course',
   }),
   entities: [User, Product, Order, OrderItem],
-  migrations: ['src/infrastructure/database/migrations/*{.ts,.js}'],
+  migrations: [
+    process.env.NODE_ENV === 'production'
+      ? 'dist/src/infrastructure/database/migrations/*{.ts,.js}'
+      : 'src/infrastructure/database/migrations/*{.ts,.js}',
+  ],
 });
 
 export default AppDataSource;
