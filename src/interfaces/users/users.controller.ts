@@ -13,7 +13,9 @@ import {
 } from '@nestjs/common';
 
 import { UsersService } from '../../application/users/users.service';
+import { Roles } from '../../common/guards/roles.guard';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
+import { Role } from '../../domain/users/role';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -53,6 +55,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.remove(id);
   }

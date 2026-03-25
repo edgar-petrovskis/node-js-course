@@ -9,6 +9,7 @@ import {
 
 import { ProductsService } from '../../application/products/products.service';
 import { ProductSort } from '../../application/products/products.service';
+import { Public } from '../../common/guards/auth.guard';
 import { Product } from '../../infrastructure/entities/product.entity';
 
 import { FindProductsQueryDto } from './dto/find-products-query.dto';
@@ -36,6 +37,7 @@ export class ProductsController {
     type: Product,
     isArray: true,
   })
+  @Public()
   async find(@Query() query: FindProductsQueryDto) {
     return this.productsService.findProducts(query);
   }

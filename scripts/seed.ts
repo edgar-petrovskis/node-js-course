@@ -3,9 +3,10 @@ import { existsSync } from 'node:fs';
 import dotenv from 'dotenv';
 import { In } from 'typeorm';
 
+import { Role } from '../src/domain/users/role';
 import dataSource from '../src/infrastructure/database/data-source';
 import { Product } from '../src/infrastructure/entities/product.entity';
-import { User, UserRole } from '../src/infrastructure/entities/user.entity';
+import { User } from '../src/infrastructure/entities/user.entity';
 
 const envFile =
   process.env.DOTENV_CONFIG_PATH ||
@@ -16,14 +17,20 @@ dotenv.config({ path: envFile });
 const usersSeed = [
   {
     email: 'admin@coffee.local',
-    passwordHash: '$2b$10$admin.seed.hash.placeholder',
-    role: UserRole.ADMIN,
+    // password: Admin123!
+    // scrypt hash in "salt:derivedKeyHex" format used by PasswordHasherAdapter.verify
+    passwordHash:
+      'adadadadadadadad:57bcddb635e0c8a53b4eba930ed4c2494d17692f699b30975912aefc6e598e3ca3efa29a994cd278a41c327392bbf4c1e74709c4ab2205170bd1e7c329644a8f',
+    role: Role.ADMIN,
     refreshTokenHash: null,
   },
   {
     email: 'user@coffee.local',
-    passwordHash: '$2b$10$user.seed.hash.placeholder',
-    role: UserRole.USER,
+    // password: User123!
+    // scrypt hash in "salt:derivedKeyHex" format used by PasswordHasherAdapter.verify
+    passwordHash:
+      'usususususususus:7a1e38dd2e99771d5ae513a6f5d587a8142da9d38187d463d1d41ca163905b867be42bc1c355509e85348c5fd21e80b62dabb8ff18e41841c35a0d7bb10d4e7b',
+    role: Role.USER,
     refreshTokenHash: null,
   },
 ];
@@ -48,7 +55,13 @@ const productsSource: Array<[string, string, number, string, number]> = [
   ['Latte House', 'Creamy latte with balanced flavor', 48000, 'UAH', 160],
   ['Flat White', 'Microfoam milk with double espresso', 46000, 'UAH', 130],
   ['Mocha Dark', 'Espresso with chocolate and steamed milk', 52000, 'UAH', 90],
-  ['Caramel Macchiato', 'Vanilla latte with caramel drizzle', 54000, 'UAH', 100],
+  [
+    'Caramel Macchiato',
+    'Vanilla latte with caramel drizzle',
+    54000,
+    'UAH',
+    100,
+  ],
   ['Vanilla Latte', 'House latte infused with vanilla', 50000, 'UAH', 145],
   [
     'Hazelnut Latte',
