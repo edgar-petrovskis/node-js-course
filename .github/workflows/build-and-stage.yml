@@ -79,7 +79,7 @@ jobs:
 
   deploy_stage:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: stage
 
@@ -87,49 +87,54 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download release manifest
-        uses: actions/download-artifact@v4
-        with:
-          name: release-manifest
-
       - name: Print release info
         run: |
           echo "commit=${GITHUB_SHA}"
           echo "image=${{ needs.build.outputs.image_ref }}"
           echo "digest=${{ needs.build.outputs.image_digest }}"
-          cat release-manifest.json
 
-      - name: Copy deploy files to stage host
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: deploy/compose.remote.yml,scripts/deploy-remote.sh
-          target: ${{ vars.DEPLOY_ROOT }}
+      - name: Sync stage app secret
+        run: |
+          kubectl create secret generic coffee-app-secrets \
+            --namespace coffee-stage \
+            --from-literal=DATABASE_USER='${{ secrets.DATABASE_USER }}' \
+            --from-literal=DATABASE_PASSWORD='${{ secrets.DATABASE_PASSWORD }}' \
+            --from-literal=DATABASE_NAME='${{ secrets.DATABASE_NAME }}' \
+            --from-literal=JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+            --from-literal=JWT_REFRESH_SECRET='${{ secrets.JWT_REFRESH_SECRET }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy to stage
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT }}
-          COMPOSE_FILE_PATH: ${{ vars.DEPLOY_ROOT }}/deploy/compose.remote.yml
-          COMPOSE_PROJECT_NAME: ${{ vars.COMPOSE_PROJECT_NAME }}
-          APP_IMAGE: ${{ needs.build.outputs.image_ref }}
-          APP_PORT: ${{ vars.APP_PORT }}
-          SMOKE_URL: ${{ vars.SMOKE_URL }}
-          GHCR_REGISTRY: ${{ env.REGISTRY }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_ROOT,COMPOSE_FILE_PATH,COMPOSE_PROJECT_NAME,APP_IMAGE,APP_PORT,SMOKE_URL,GHCR_REGISTRY,GHCR_USERNAME,GHCR_TOKEN,DATABASE_USER,DATABASE_PASSWORD,DATABASE_NAME,JWT_SECRET,JWT_REFRESH_SECRET
-          script: |
-            chmod +x "${DEPLOY_ROOT}/scripts/deploy-remote.sh"
-            "${DEPLOY_ROOT}/scripts/deploy-remote.sh"
+      - name: Sync stage GHCR pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-creds \
+            --namespace coffee-stage \
+            --docker-server=ghcr.io \
+            --docker-username='${{ secrets.GHCR_USERNAME }}' \
+            --docker-password='${{ secrets.GHCR_TOKEN }}' \
+            --docker-email='ci@example.local' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply stage manifests
+        run: kubectl apply -k k8s/stage
+
+      - name: Update stage image
+        run: |
+          kubectl set image deployment/coffee-api \
+            api=${{ needs.build.outputs.image_ref }} \
+            --namespace coffee-stage
+
+      - name: Wait for stage rollout
+        run: |
+          kubectl rollout status deployment/coffee-api \
+            --namespace coffee-stage \
+            --timeout=180s
+
+      - name: Smoke check stage API
+        run: |
+          kubectl port-forward service/coffee-api 18080:80 \
+            --namespace coffee-stage \
+            >/tmp/coffee-stage-port-forward.log 2>&1 &
+          PORT_FORWARD_PID=$!
+          trap 'kill ${PORT_FORWARD_PID}' EXIT
+          sleep 5
+          curl --fail --silent --show-error http://127.0.0.1:18080/ >/dev/null

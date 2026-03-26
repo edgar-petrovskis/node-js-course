@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: coffee-api
+  labels:
+    app: coffee-api
+spec:
+  selector:
+    app: coffee-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

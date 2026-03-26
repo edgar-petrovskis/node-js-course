@@ -21,7 +21,7 @@ env:
 
 jobs:
   deploy_production:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: production
 
@@ -35,37 +35,38 @@ jobs:
           echo "image_tag=${{ inputs.image_tag }}"
           echo "target=production"
 
-      - name: Copy deploy files to production host
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: deploy/compose.remote.yml,scripts/deploy-remote.sh
-          target: ${{ vars.DEPLOY_ROOT }}
+      - name: Sync production app secret
+        run: |
+          kubectl create secret generic coffee-app-secrets \
+            --namespace coffee-prod \
+            --from-literal=DATABASE_USER='${{ secrets.DATABASE_USER }}' \
+            --from-literal=DATABASE_PASSWORD='${{ secrets.DATABASE_PASSWORD }}' \
+            --from-literal=DATABASE_NAME='${{ secrets.DATABASE_NAME }}' \
+            --from-literal=JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+            --from-literal=JWT_REFRESH_SECRET='${{ secrets.JWT_REFRESH_SECRET }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy to production
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT }}
-          COMPOSE_FILE_PATH: ${{ vars.DEPLOY_ROOT }}/deploy/compose.remote.yml
-          COMPOSE_PROJECT_NAME: ${{ vars.COMPOSE_PROJECT_NAME }}
-          APP_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
-          APP_PORT: ${{ vars.APP_PORT }}
-          SMOKE_URL: ${{ vars.SMOKE_URL }}
-          GHCR_REGISTRY: ${{ env.REGISTRY }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          DATABASE_USER: ${{ secrets.DATABASE_USER }}
-          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_ROOT,COMPOSE_FILE_PATH,COMPOSE_PROJECT_NAME,APP_IMAGE,APP_PORT,SMOKE_URL,GHCR_REGISTRY,GHCR_USERNAME,GHCR_TOKEN,DATABASE_USER,DATABASE_PASSWORD,DATABASE_NAME,JWT_SECRET,JWT_REFRESH_SECRET
-          script: |
-            chmod +x "${DEPLOY_ROOT}/scripts/deploy-remote.sh"
-            "${DEPLOY_ROOT}/scripts/deploy-remote.sh"
+      - name: Sync production GHCR pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-creds \
+            --namespace coffee-prod \
+            --docker-server=ghcr.io \
+            --docker-username='${{ secrets.GHCR_USERNAME }}' \
+            --docker-password='${{ secrets.GHCR_TOKEN }}' \
+            --docker-email='ci@example.local' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply production manifests
+        run: kubectl apply -k k8s/prod
+
+      - name: Update production image
+        run: |
+          kubectl set image deployment/coffee-api \
+            api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }} \
+            --namespace coffee-prod
+
+      - name: Wait for production rollout
+        run: |
+          kubectl rollout status deployment/coffee-api \
+            --namespace coffee-prod \
+            --timeout=180s

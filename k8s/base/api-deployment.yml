@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coffee-api
+  labels:
+    app: coffee-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coffee-api
+  template:
+    metadata:
+      labels:
+        app: coffee-api
+    spec:
+      imagePullSecrets:
+        - name: ghcr-creds
+      containers:
+        - name: api
+          image: ghcr.io/replace-me/node-js-course:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_HOST
+              value: postgres
+            - name: DATABASE_PORT
+              value: "5432"
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secrets
+                  key: DATABASE_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secrets
+                  key: DATABASE_PASSWORD
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secrets
+                  key: DATABASE_NAME
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secrets
+                  key: JWT_SECRET
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secrets
+                  key: JWT_REFRESH_SECRET
